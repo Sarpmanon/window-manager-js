@@ -1,4 +1,4 @@
-import { Window, Button, Taskbar, UIpref, windows } from './scripts/classes.js'
+import { Window, Button, Taskbar, UIpref, windows, Label } from './scripts/classes.js'
 import { inRect } from './scripts/utils.js' 
 
 export const canvas = document.createElement("canvas")
@@ -47,9 +47,16 @@ const taskbar_items = [
     { label: "File", submenu: ["New", "Close"]},
     { label: "Edit", submenu: ["AAAAAA", "Test", "aaaa"]}
 ]
+export const taskbar = new Taskbar()
+for (let i = 0; i < taskbar_items.length; i++) { 
+    ctx.font = "14px Chicago"
 
-const taskbar = new Taskbar()
-for (let i = 0; i < taskbar_items.length; i++) { taskbar.addElement(taskbar_items[i]) }
+    const tskbr_item = taskbar_items[i];
+    const btnwidth = ctx.measureText(tskbr_item.label).width
+    
+    const tskbr_btn = new Button(0, 0, btnwidth, UIpref.taskbar.h, { type: "text", src: tskbr_item.submenu, alt: tskbr_item.label})
+    taskbar.addElement(tskbr_btn)
+}
 
 function drawTaskbar() {
     taskbar.draw(ctx)
@@ -62,6 +69,7 @@ const win_test2 = new Window(40, 70, 300, 200, "doktooor")
 
 const button_test = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "This PC" }, null)
 const button_test2 = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
+const labelamk = new Label(0, 0, 0, 0, "labeltest")
 win_test2.addElement(button_test)
 win_test2.addElement(button_test)
 win_test2.addElement(button_test)
@@ -70,6 +78,7 @@ win_test2.addElement(button_test)
 win_test2.addElement(button_test)
 win_test2.addElement(button_test)
 win_test2.addElement(button_test2)
+win_test2.addElement(labelamk)
 
 
 canvas.addEventListener("mousemove", (e) => {
@@ -88,6 +97,8 @@ canvas.addEventListener("mousedown", (e) => {
     mouse.y = e.clientY
 
     mouse.down = true;
+
+    taskbar.click(mouse.x, mouse.y)
 
     if (taskbar.selectedMenu != -1) return;
 

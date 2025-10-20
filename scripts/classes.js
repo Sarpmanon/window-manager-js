@@ -1,5 +1,6 @@
 import { inRect, sleep } from "./utils.js";
 import { canvas, mouse } from "../script.js";
+import { handleCommand } from "./behaviours/taskbar/commandHandler.js"
 
 const chc = new FontFace('Chicago', 'url(./assets/fonts/chicago.ttf)')
 chc.load().then((loadedfont) => {
@@ -15,7 +16,9 @@ class UIElement {
         this.visible = true;
     }
 
-    draw(ctx) {}
+        drawAt(ctx, x, y) {
+        }
+
     update() {}
     click(mx, my) {}
     contains(mx, my) {
@@ -45,63 +48,28 @@ export class Button extends UIElement {
         }
     }
 
-    draw(ctx, index, window) {
-        if (!this.visible) return;
+    drawAt(ctx, xPos, yPos) {
+        this.updateHover(xPos, yPos);
 
-        let leftPadding = 10;
-        let usableWindow = window.w - leftPadding;
+        if (this.spec.type === "img") {
+            const icon = new Image();
+            icon.src = this.spec.src;
 
-        let spacing = 10;
-        let fullBoxWidth = this.w + spacing;
+            ctx.fillStyle = this.hover ? UIpref.button.hoverColor : "#fff";
+            ctx.fillRect(xPos, yPos, this.w, this.h);
 
-        let cols = Math.floor(usableWindow / (fullBoxWidth))
+            ctx.fillStyle = "#000";
+            ctx.font = "14px Chicago";
+            ctx.fillText(this.spec.alt, xPos, yPos + this.h + 10);
 
-        let col = index % cols
-        let row = Math.floor(index / cols)
+            ctx.drawImage(icon, xPos + (this.w - icon.width) / 2, yPos + (this.h - icon.height) / 2);
+        } else if (this.spec.type === "text") {
+            ctx.fillStyle = this.hover ? UIpref.taskbar.menu.hoverColor : "#fff";
+            ctx.fillRect(xPos, yPos, this.w, this.h);
 
-        let totalPrevHeight = 0;
-
-        for (let i = 0; i < row; i++) {
-            const sameRowButtons = window.children.filter((_, idx) => Math.floor(idx / cols) === i)
-            const maxH = Math.max(...sameRowButtons.map(b => b.h))
-            totalPrevHeight += maxH + spacing * 2.5
-        }
-
-        let xPos = (window.x + leftPadding) + col * fullBoxWidth;
-        let yPos = (window.y + UIpref.titlebar.h + 10) + totalPrevHeight
-
-        this.updateHover(xPos, yPos)
-
-        if (this.spec.type == "img") {
-            // --------------------- Image Type Button ---------------------
-            const icon = new Image()
-            icon.src = this.spec.src
-
-            if(!this.hover) { ctx.fillStyle = "#fff" } else { ctx.fillStyle = UIpref.button.hoverColor }
-            ctx.fillRect(
-                xPos,
-                yPos,
-                this.w, this.h
-            )
-
-            ctx.fillStyle = "#000"
-            ctx.font = "14px Chicago"
-            ctx.fillText(this.spec.alt, xPos, yPos + this.h + 10)
-
-            ctx.drawImage(icon, xPos + (this.w - icon.width) / 2, yPos + (this.h - icon.height) / 2)
-        } else if (this.spec.type == "text") {
-            // --------------------- Text Type Button ---------------------
-            if(!this.hover) { ctx.fillStyle = "#fff" } else { ctx.fillStyle = UIpref.taskbar.menu.hoverColor }
-
-            ctx.fillRect(
-                xPos,
-                yPos,
-                this.w, this.h
-            )
-
-            ctx.fillStyle = "#000"
-            ctx.font = "14px Chicago"
-            ctx.fillText(this.spec.alt, xPos, yPos + this.h / 2)
+            ctx.fillStyle = "#000";
+            ctx.font = "14px Chicago";
+            ctx.fillText(this.spec.alt, xPos, yPos + this.h / 2);
         }
     }
 
@@ -155,30 +123,58 @@ export class Window extends UIElement {
         ctx.lineTo(this.x + this.w, this.y + UIpref.titlebar.h)
         ctx.stroke();
 
-        //title
-        ctx.font = "15px Poppins"
-        let title_string = this.title, text_width = ctx.measureText(title_string).width
-        ctx.textBaseline = "middle"
-        
-        ctx.fillStyle = "#000"
-        ctx.font = "14px Chicago"
-        ctx.fillText(title_string, (this.x + this.w / 2) - text_width / 2, (this.y + UIpref.titlebar.h / 2))
+        ctx.fillStyle = UIpref.titlebar.color;
+        ctx.fillRect(this.x, this.y, this.w, UIpref.titlebar.h);
 
-        this.children.forEach((el, index) => el.draw(ctx, index, this))
+        // title
+        ctx.font = "14px Chicago";
+        ctx.fillStyle = "#000";
+        ctx.textBaseline = "middle";
+        let titleWidth = ctx.measureText(this.title).width;
+        ctx.fillText(this.title, (this.x + this.w / 2) - titleWidth / 2, this.y + UIpref.titlebar.h / 2);
 
-        //draws the close button
+        const spacing = 10;
+        const leftPadding = 10;
+        const topPadding = UIpref.titlebar.h;
+        const usableWindow = this.w - leftPadding;
+
+        const fullBoxWidth = 60 + spacing;
+        const cols = Math.floor(usableWindow / fullBoxWidth);
+
+        let totalPrevHeight = 0;
+        let row = 0, col = 0;
+
+        for (let i = 0; i < this.children.length; i++) {
+            const el = this.children[i];
+
+            col = i % cols;
+            row = Math.floor(i / cols);
+
+            if (col === 0) {
+                const sameRow = this.children.slice(i - cols, i);
+                const maxH = Math.max(...sameRow.map(e => e.h + 20 || 0), 0);
+                totalPrevHeight += maxH + spacing;
+            }
+
+            const xPos = this.x + leftPadding + col * fullBoxWidth;
+            const yPos = this.y + topPadding + totalPrevHeight;
+
+            el.drawAt(ctx, xPos, yPos, this);
+        }
+
+        // Close button
         if (!this.clicked) {
-            ctx.strokeStyle = "#000"
-            ctx.lineWidth = "2"
-            ctx.strokeRect(this.x + 10, this.y + 10, 10, 10)
-        } else  {
-            ctx.fillStyle = "#000"
-            ctx.fillRect(this.x + 10, this.y + 10, 10, 10)
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(this.x + 10, this.y + 10, 10, 10);
+        } else {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(this.x + 10, this.y + 10, 10, 10);
         }
     }
 
-    click(mx, my) {
 
+    click(mx, my) {
         // --------------------- Clicks each child ---------------------
         this.children.forEach(el => el.click(mx, my))
         const g = this.getClose()
@@ -200,7 +196,7 @@ export class Window extends UIElement {
 
     close() {
         const iof = windows.indexOf(this);
-        if (iof > -1) windows.splice(iof, 1)
+        if (iof >= 0) windows.splice(iof, 1)
     }
 }
 
@@ -221,21 +217,34 @@ export class Taskbar extends UIElement {
      * @param {CanvasRenderingContext2D} ctx 
      */
     draw(ctx) {
+        this.w = window.innerWidth;
+        this.h = UIpref.taskbar.h;
+        this.x = 0;
+        this.y = 0;
+
+        ctx.font = "14px Chicago" //font
+
+        // --------------------- Main Background ---------------------
         ctx.fillStyle = UIpref.taskbar.color;
-        ctx.fillRect(0, 0, window.innerWidth, UIpref.taskbar.h)
+        ctx.fillRect(this.x, this.y, this.w, this.h)
 
         let xPos = 10;
         let yPos = (UIpref.taskbar.h / 2)
 
+        //finds the widest string
+        let thisItems = this.items;
+        let widestString = Math.max(...thisItems.map(it => ctx.measureText(it.spec.alt).width))
+
         for (let i = 0; i < this.items.length; i++) {
             const taskMenu = this.items[i]
 
-            const textWidth = ctx.measureText(taskMenu.label).width;
+            const textWidth = taskMenu.w
+            const boxWidth = widestString + 20; //padding
 
-            if (inRect({ x: mouse.x, y: mouse.y }, xPos, textWidth, yPos - UIpref.titlebar.h / 2, UIpref.taskbar.h)) {
+            if (inRect({ x: mouse.x, y: mouse.y }, xPos - 10, boxWidth, yPos - UIpref.titlebar.h / 2, UIpref.taskbar.h)) {
                 ctx.fillStyle = UIpref.taskbar.menu.hoverColor;
-                ctx.fillRect(xPos - 10, yPos - UIpref.taskbar.h / 2, textWidth + 20, UIpref.taskbar.h)
-
+                ctx.fillRect((xPos - 10), yPos - UIpref.taskbar.h / 2, boxWidth, UIpref.taskbar.h)
+            
                 if (mouse.down) {
                     if (this.selectedMenu == i) {
                         this.selectedMenu = -1;
@@ -246,14 +255,15 @@ export class Taskbar extends UIElement {
                 }
             }
             
+            // Draws the submenu based on index
             if (this.selectedMenu != -1 && this.selectedMenu == i) {
-                this.drawSubMenu(xPos - 10, UIpref.titlebar.h, textWidth + 20, UIpref.taskbar.h, i, ctx); this.selectedMenu = i
+                this.drawSubMenu(xPos - 10, UIpref.titlebar.h, textWidth + 20, UIpref.taskbar.h, i, ctx);
             };
 
             ctx.fillStyle = "#000"
             ctx.font = "14px Chicago"
             ctx.textBaseline = "middle"
-            ctx.fillText(taskMenu.label, xPos, yPos)
+            ctx.fillText(taskMenu.spec.alt, xPos, yPos)
 
             ctx.beginPath();
             ctx.lineWidth = 1;
@@ -261,7 +271,7 @@ export class Taskbar extends UIElement {
             ctx.lineTo(canvas.width, UIpref.taskbar.h)
             ctx.stroke()
 
-            xPos += textWidth + UIpref.taskbar.spacing;
+            xPos += widestString + UIpref.taskbar.spacing
         }
     }
 
@@ -270,10 +280,10 @@ export class Taskbar extends UIElement {
         let yP = yPos;
 
         // finds the longest width of a text
-        const submenu = this.items[index].submenu;
+        const submenu = this.items[index].spec.src;
         const maxWidth = Math.max(...submenu.map(text => ctx.measureText(text).width));
 
-        const numberOfItems = this.items[index].submenu.length;
+        const numberOfItems = this.items[index].spec.src.length;
 
         for (let i = 0; i < submenu.length; i++) {
             const text = submenu[i];
@@ -283,7 +293,15 @@ export class Taskbar extends UIElement {
 
             if(inRect({ x: mouse.x, y: mouse.y }, xP, maxWidth + 20, yP, h + 10)) {
                 this.subMenuHover(xP, yP, maxWidth + 20, h + 10, ctx)
-                mouse.target = "button"
+                if (mouse.down) {
+                    // zibidizapzup
+                    mouse.target = "button"
+                    mouse.down = false;
+
+                    // click function
+                    handleCommand(this.items[index].spec.src[i])
+                    this.selectedMenu = -1;
+                }
             } else {
                 ctx.fillStyle = "#f0f0f0";
                 ctx.fillRect(xP, yP, maxWidth + 20, h + 10);
@@ -306,6 +324,56 @@ export class Taskbar extends UIElement {
     subMenuHover(x, y, w, h, ctx) {
         ctx.fillStyle = "#d1d1d1"
         ctx.fillRect(x, y, w, h)
+    }
+
+    click(mx, my) {
+        if (
+            mx > this.x &&
+            mx < this.x + this.w &&
+            my > this.y &&
+            my < this.y + this.h
+        ) {
+            // TASKBAR CLICK, IMPORTANT FOR LATER
+        }
+    }
+}
+
+export class Label extends UIElement {
+    constructor(x, y, w, h, text) {
+        super(x, y, w, h);
+        this.text = text;
+    }
+
+    wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(" ");
+        let line = "";
+
+        for (let i = 0; i < words.length; i++) {
+            const testLine = line + words[i] + " ";
+            const testWidth = ctx.measureText(testLine).width;
+
+            if (testWidth > maxWidth && i > 0) {
+                ctx.fillText(line, x, y);
+                line = words[i] + " ";
+                y += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+
+        ctx.fillText(line, x, y);
+    }
+
+    drawAt(ctx, x, y, parent) {
+        ctx.fillStyle = "#000";
+        ctx.font = "14px Chicago";
+        ctx.textAlign = "left";
+
+        const padding = 10;
+        const maxWidth = parent.w - padding * 2;
+        const lineHeight = 18;
+
+        this.wrapText(ctx, this.text, x + padding, y + padding, maxWidth, lineHeight);
     }
 }
 
