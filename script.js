@@ -1,4 +1,4 @@
-import { Window, Button, Taskbar, UIpref, windows, Label } from './scripts/classes.js'
+import { Window, Button, Taskbar, UIpref, windows, Label, Desktop } from './scripts/classes.js'
 import { inRect } from './scripts/utils.js' 
 
 export const canvas = document.createElement("canvas")
@@ -63,9 +63,24 @@ function drawTaskbar() {
 }
 // --------------------- Taskbar and submenus ---------------------
 
-const terminal = new Window(30, 50, 300, 200, "doktor")
+// --------------------- Desktop ---------------------
 
+const Desktop_Main = new Desktop()
+const button_test_aaaa = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "Desktop"}, null)
+Desktop_Main.addElement(button_test_aaaa)
+Desktop_Main.addElement(button_test_aaaa)
+Desktop_Main.addElement(button_test_aaaa)
+Desktop_Main.addElement(button_test_aaaa)
+Desktop_Main.addElement(button_test_aaaa)
+
+
+function drawDesktop() {
+    Desktop_Main.drawAt(ctx)
+}
+
+// --------------------- Desktop ---------------------
 const win_test2 = new Window(40, 70, 300, 200, "doktooor")
+const win_test = new Window(40, 70, 300, 200, "doktooor")
 
 const button_test = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "This PC" }, null)
 const button_test2 = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
@@ -79,6 +94,8 @@ win_test2.addElement(button_test)
 win_test2.addElement(button_test)
 win_test2.addElement(button_test2)
 win_test2.addElement(labelamk)
+win_test.addElement(button_test)
+win_test.addElement(button_test)
 
 
 canvas.addEventListener("mousemove", (e) => {
@@ -130,10 +147,27 @@ canvas.addEventListener("mouseup", (e) => {
     mouse.down = false;
 })
 
+const keypresses = {};
+document.addEventListener("keydown", (e) => {
+    keypresses[e.key] = true;
+
+    checkKeys()
+})
+document.addEventListener("keyup", (e) => {
+    delete keypresses[e.key]
+})
+
+function checkKeys() {
+    if (keypresses["Alt"] && keypresses["q"]) {
+        windows.splice(windows.length - 1, 1)
+    }
+}
+
 function tick() {
     ctx.fillStyle = "#e0e0e0"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
+    drawDesktop();
     drawWindows();
     drawTaskbar();
     requestAnimationFrame(tick)

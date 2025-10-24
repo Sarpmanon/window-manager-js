@@ -48,27 +48,35 @@ export class Button extends UIElement {
         }
     }
 
-    drawAt(ctx, xPos, yPos) {
+    drawAt(ctx, xPos, yPos, windowRef) {
         this.updateHover(xPos, yPos);
 
         if (this.spec.type === "img") {
             const icon = new Image();
             icon.src = this.spec.src;
+            
+            const topWindow = windows.length > 0 ? windows[windows.length - 1] : null
 
-            ctx.fillStyle = this.hover ? UIpref.button.hoverColor : "#fff";
-            ctx.fillRect(xPos, yPos, this.w, this.h);
+            if (this.hover && ((this.type=="desktop" && (!topWindow || mouse.x<topWindow.x||mouse.x>topWindow.x+topWindow.w||mouse.y<topWindow.y||mouse.y>topWindow.y+topWindow.h)) || topWindow===windowRef)) {
+                console.log(windows)
+                ctx.fillStyle = UIpref.button.hoverColor
+                ctx.fillRect(xPos, yPos, this.w, this.h);
+            }
+            //ctx.fillStyle = this.hover && (windows?.indexOf?.(window)) == 1 ? UIpref.button.hoverColor : "#fff";
 
             ctx.fillStyle = "#000";
             ctx.font = "14px Chicago";
+            ctx.textAlign = "left"
             ctx.fillText(this.spec.alt, xPos, yPos + this.h + 10);
 
             ctx.drawImage(icon, xPos + (this.w - icon.width) / 2, yPos + (this.h - icon.height) / 2);
         } else if (this.spec.type === "text") {
-            ctx.fillStyle = this.hover ? UIpref.taskbar.menu.hoverColor : "#fff";
+            ctx.fillStyle = this.hover && (windows?.indexOf?.(window)) === 1 ? UIpref.taskbar.menu.hoverColor : "#fff";
             ctx.fillRect(xPos, yPos, this.w, this.h);
 
             ctx.fillStyle = "#000";
             ctx.font = "14px Chicago";
+            ctx.textAlign = "left"
             ctx.fillText(this.spec.alt, xPos, yPos + this.h / 2);
         }
     }
@@ -131,6 +139,7 @@ export class Window extends UIElement {
         ctx.fillStyle = "#000";
         ctx.textBaseline = "middle";
         let titleWidth = ctx.measureText(this.title).width;
+        ctx.textAlign = "left"
         ctx.fillText(this.title, (this.x + this.w / 2) - titleWidth / 2, this.y + UIpref.titlebar.h / 2);
 
         const spacing = 10;
@@ -160,6 +169,7 @@ export class Window extends UIElement {
             const yPos = this.y + topPadding + totalPrevHeight;
 
             el.drawAt(ctx, xPos, yPos, this);
+            el.type = "window"
         }
 
         // Close button
@@ -241,6 +251,7 @@ export class Taskbar extends UIElement {
             const textWidth = taskMenu.w
             const boxWidth = widestString + 20; //padding
 
+            // Hover
             if (inRect({ x: mouse.x, y: mouse.y }, xPos - 10, boxWidth, yPos - UIpref.titlebar.h / 2, UIpref.taskbar.h)) {
                 ctx.fillStyle = UIpref.taskbar.menu.hoverColor;
                 ctx.fillRect((xPos - 10), yPos - UIpref.taskbar.h / 2, boxWidth, UIpref.taskbar.h)
@@ -260,10 +271,12 @@ export class Taskbar extends UIElement {
                 this.drawSubMenu(xPos - 10, UIpref.titlebar.h, textWidth + 20, UIpref.taskbar.h, i, ctx);
             };
 
+            // Draws the text
             ctx.fillStyle = "#000"
             ctx.font = "14px Chicago"
             ctx.textBaseline = "middle"
-            ctx.fillText(taskMenu.spec.alt, xPos, yPos)
+            ctx.textAlign = "center"
+            ctx.fillText(taskMenu.spec.alt, xPos+ (boxWidth / 2) - (textWidth / 2), yPos)
 
             ctx.beginPath();
             ctx.lineWidth = 1;
@@ -310,6 +323,7 @@ export class Taskbar extends UIElement {
             
             // text
             ctx.fillStyle = "#000";
+            ctx.textAlign = "left"
             ctx.fillText(text, xP + 10, yP + h / 1.5);
 
             // frame
@@ -353,6 +367,7 @@ export class Label extends UIElement {
             const testWidth = ctx.measureText(testLine).width;
 
             if (testWidth > maxWidth && i > 0) {
+                ctx.textAlign = "left"
                 ctx.fillText(line, x, y);
                 line = words[i] + " ";
                 y += lineHeight;
@@ -361,6 +376,7 @@ export class Label extends UIElement {
             }
         }
 
+        ctx.textAlign = "left"
         ctx.fillText(line, x, y);
     }
 
@@ -374,6 +390,51 @@ export class Label extends UIElement {
         const lineHeight = 18;
 
         this.wrapText(ctx, this.text, x + padding, y + padding, maxWidth, lineHeight);
+    }
+}
+
+export class Desktop {
+    constructor() {
+        this.children = [];
+    }
+
+    addElement(el) {
+        this.children.push(el)
+    }
+
+    drawAt(ctx) {
+        ctx.fillRect(0, UIpref.taskbar.h + 1, window.innerWidth, window.innerHeight)
+
+        let totalPrevHeight = 0;
+
+        let cols = Math.floor(canvas.height / 60)
+        let row = 0, col = 0;
+
+        let leftPadding = 0;
+        let topPadding = 10;
+
+        for (let i = 0; i < this.children.length; i++) {
+            const el = this.children[i]
+
+            col = i % cols
+            row = Math.floor(i / cols)
+
+            if (col === 0) {
+                const sameRow = this.children.slice(i - cols, i);
+                const maxH = sameRow.length > 0 
+                    ? Math.max(...sameRow.map(e => (e.h || 0) + 20)) 
+                    : 0;
+                totalPrevHeight += maxH + leftPadding
+            }
+
+            const xPos = 20 + totalPrevHeight
+            const yPos = UIpref.taskbar.h + topPadding + col * 80
+
+            el.drawAt(ctx, xPos,yPos,null)
+            el.type = "desktop";
+        }
+
+        //this.children.forEach((children) => children.drawAt(ctx, 40, 40, null))
     }
 }
 
@@ -393,6 +454,9 @@ export const UIpref = {
     },
     button: {
         hoverColor: "#9c9c9c"
+    },
+    desktop: {
+        buttonHoverColor: "#000"
     }
 }
 
