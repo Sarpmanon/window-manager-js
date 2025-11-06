@@ -1,4 +1,5 @@
 import { Window, Button, Taskbar, Label, UIpref, windows } from '../../classes.js'
+import { Desktop_Main } from '../../../script.js';
 
 export const Menu_Options = {
     About() {
@@ -13,7 +14,8 @@ export const Menu_Options = {
 
 export const File_Options = {
     New() {
-        
+        const button = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "Desktop"}, null)
+        Desktop_Main.addElement(button)
     },
     Close() {
 

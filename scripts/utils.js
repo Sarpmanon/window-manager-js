@@ -15,3 +15,10 @@ export function sleep(ms) {
         }
     }
 }
+
+CanvasRenderingContext2D.prototype.strokeRoundedRect = function(x = 0, y = 0, w = 150, h = 100, radius, color) {
+    this.strokeStyle = color || "#000"
+    this.beginPath();
+    this.roundRect(x, y,  w, h, radius)
+    this.stroke(); //change to this.fill() for it to fill all the square
+}

@@ -1,8 +1,12 @@
-import { Window, Button, Taskbar, UIpref, windows, Label, Desktop } from './scripts/classes.js'
+import { Window, Button, Taskbar, UIpref, windows, Label, Desktop, Textbox } from './scripts/classes.js'
 import { inRect } from './scripts/utils.js' 
+import { all_cursors } from './assets/cursors/cursors.js'
 
 export const canvas = document.createElement("canvas")
-const ctx = canvas.getContext("2d")
+canvas.id = "canvas"
+
+globalThis.ctx = canvas.getContext("2d")
+export const ctx = globalThis.ctx
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -16,6 +20,8 @@ canvas.style.zIndex = "9999";
 canvas.style.display = "block";
 canvas.style.background = "#fff";
 
+document.body.style.cursor = "none" //hides the cursor that the user uses
+
 export let mouse = {
     x: 0,
     y: 0,
@@ -24,6 +30,12 @@ export let mouse = {
     target: null,
     offsetX: 0,
     offsetY: 0,
+    type: "default",
+}
+
+function drawMouse() {
+    if (mouse.type === "default") { ctx.drawImage(all_cursors.default, mouse.x, mouse.y) }
+    if (mouse.type === "text") { ctx.drawImage(all_cursors.text, mouse.x, mouse.y) }
 }
 
 function drawWindows() {
@@ -65,13 +77,11 @@ function drawTaskbar() {
 
 // --------------------- Desktop ---------------------
 
-const Desktop_Main = new Desktop()
-const button_test_aaaa = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "Desktop"}, null)
-Desktop_Main.addElement(button_test_aaaa)
-Desktop_Main.addElement(button_test_aaaa)
-Desktop_Main.addElement(button_test_aaaa)
-Desktop_Main.addElement(button_test_aaaa)
-Desktop_Main.addElement(button_test_aaaa)
+export const Desktop_Main = new Desktop()
+const Disk_Btn = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/5in_fdd.png", alt: "System"}, () => {
+    const System_Window = new Window(40, 70, 300, 200, "System")
+})
+Desktop_Main.addElement(Disk_Btn)
 
 
 function drawDesktop() {
@@ -79,23 +89,19 @@ function drawDesktop() {
 }
 
 // --------------------- Desktop ---------------------
+
 const win_test2 = new Window(40, 70, 300, 200, "doktooor")
 const win_test = new Window(40, 70, 300, 200, "doktooor")
+const textBox = new Textbox(0, 0, 100, 50)
 
-const button_test = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "This PC" }, null)
-const button_test2 = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
-const labelamk = new Label(0, 0, 0, 0, "labeltest")
-win_test2.addElement(button_test)
-win_test2.addElement(button_test)
-win_test2.addElement(button_test)
-win_test2.addElement(button_test)
-win_test2.addElement(button_test)
-win_test2.addElement(button_test)
-win_test2.addElement(button_test)
-win_test2.addElement(button_test2)
-win_test2.addElement(labelamk)
-win_test.addElement(button_test)
-win_test.addElement(button_test)
+win_test.addElement(textBox)
+
+const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "This PC" }, null)
+const Text_Button_Sample = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
+const Sample_Label = new Label(0, 0, 0, 0, "labeltest")
+win_test2.addElement(Button_Sample)
+win_test2.addElement(Text_Button_Sample)
+win_test2.addElement(Sample_Label)
 
 
 canvas.addEventListener("mousemove", (e) => {
@@ -116,9 +122,10 @@ canvas.addEventListener("mousedown", (e) => {
     mouse.down = true;
 
     taskbar.click(mouse.x, mouse.y)
-
     if (taskbar.selectedMenu != -1) return;
 
+    // Windows
+    let ifWindowClicked = false;
     for (let i = windows.length - 1; i >= 0; i-- ) {
         const wind = windows[i]
         if (!inRect(mouse, wind.x, wind.w, wind.y, wind.h + UIpref.titlebar.h)) continue;
@@ -136,7 +143,18 @@ canvas.addEventListener("mousedown", (e) => {
         windows.splice(i, 1)
         windows.push(wind)
 
+        wind.click(mouse.x, mouse.y, ctx)
+        ifWindowClicked = true;
+
         break;
+    }
+
+    if (ifWindowClicked) return;
+
+    // Desktop
+    for (let i = 0; i < Desktop_Main.children.length; i++) {
+        const child = Desktop_Main.children[i]
+        child.click()
     }
 })
 
@@ -145,13 +163,34 @@ canvas.addEventListener("mouseup", (e) => {
     mouse.target = null;
 
     mouse.down = false;
+
+    for (let i = windows.length -1; i >= 0; i--) {
+        const wind = windows[i]
+
+        wind.unClick()
+    }
 })
 
 const keypresses = {};
 document.addEventListener("keydown", (e) => {
     keypresses[e.key] = true;
 
-    checkKeys()
+    checkKeys();
+    for(let i = windows.length - 1; i >= 0; i--) {
+        const wind = windows[i]
+
+        if (windows.indexOf(wind) !== windows.length - 1) return;
+
+        wind.children.forEach((element, ind) => {
+            console.log("1", element)
+            if (!(element instanceof Textbox)) return;
+            if (element.active == false) return;
+
+            console.log("2", element)
+
+            element.text = element.text + e.key
+        });
+    }
 })
 document.addEventListener("keyup", (e) => {
     delete keypresses[e.key]
@@ -170,6 +209,7 @@ function tick() {
     drawDesktop();
     drawWindows();
     drawTaskbar();
+    drawMouse();
     requestAnimationFrame(tick)
 }
 

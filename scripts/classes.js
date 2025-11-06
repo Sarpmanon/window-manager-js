@@ -33,6 +33,9 @@ export class Button extends UIElement {
         this.onClick = onClick;
 
         this.hover = false;
+
+        this.xPos = 0;
+        this.yPos = 0;
     }
 
     updateHover(xPos, yPos) {
@@ -49,6 +52,8 @@ export class Button extends UIElement {
     }
 
     drawAt(ctx, xPos, yPos, windowRef) {
+        this.xPos = xPos;
+        this.yPos = yPos;
         this.updateHover(xPos, yPos);
 
         if (this.spec.type === "img") {
@@ -57,8 +62,9 @@ export class Button extends UIElement {
             
             const topWindow = windows.length > 0 ? windows[windows.length - 1] : null
 
+            const textWidth = ctx.measureText(this.spec.alt).width
+
             if (this.hover && ((this.type=="desktop" && (!topWindow || mouse.x<topWindow.x||mouse.x>topWindow.x+topWindow.w||mouse.y<topWindow.y||mouse.y>topWindow.y+topWindow.h)) || topWindow===windowRef)) {
-                console.log(windows)
                 ctx.fillStyle = UIpref.button.hoverColor
                 ctx.fillRect(xPos, yPos, this.w, this.h);
             }
@@ -67,11 +73,11 @@ export class Button extends UIElement {
             ctx.fillStyle = "#000";
             ctx.font = "14px Chicago";
             ctx.textAlign = "left"
-            ctx.fillText(this.spec.alt, xPos, yPos + this.h + 10);
+            ctx.fillText(this.spec.alt, xPos + ((this.w / 2) - textWidth / 2), yPos + this.h + 10);
 
             ctx.drawImage(icon, xPos + (this.w - icon.width) / 2, yPos + (this.h - icon.height) / 2);
         } else if (this.spec.type === "text") {
-            ctx.fillStyle = this.hover && (windows?.indexOf?.(window)) === 1 ? UIpref.taskbar.menu.hoverColor : "#fff";
+            ctx.fillStyle = this.hover ? UIpref.taskbar.menu.hoverColor : "#fff";
             ctx.fillRect(xPos, yPos, this.w, this.h);
 
             ctx.fillStyle = "#000";
@@ -81,15 +87,19 @@ export class Button extends UIElement {
         }
     }
 
-    click(mx, my) {
+    click() {
         if (
-            mx > this.x &&
-            mx < this.x + this.w &&
-            my > this.y &&
-            my < this.y + this.h
+            mouse.x > this.xPos &&
+            mouse.x < this.xPos + this.w &&
+            mouse.y > this.yPos &&
+            mouse.y < this.yPos + this.h
         ) {
             this.onClick?.()
         }
+    }
+
+    unClick() {
+
     }
 }
 
@@ -104,6 +114,7 @@ export class Window extends UIElement {
     }
 
     addElement(element) {
+        if (!element) return;
         this.children.push(element)
     }
 
@@ -112,6 +123,8 @@ export class Window extends UIElement {
      * @param {CanvasRenderingContext2D} ctx 
      */
     draw(ctx) {
+        this.ctx = ctx;
+
         //line surrounding it
         ctx.strokeStyle = "rgb(0, 0, 0)"
         ctx.lineWidth = 4
@@ -184,11 +197,10 @@ export class Window extends UIElement {
     }
 
 
-    click(mx, my) {
+    click(mx, my, ctx) {
         // --------------------- Clicks each child ---------------------
-        this.children.forEach(el => el.click(mx, my))
+        this.children.forEach(el => { el.click(mx, my) })
         const g = this.getClose()
-
 
         // --------------------- Close Button ---------------------
         if (inRect({ x: mx, y: my}, g.x, g.w, g.y, g.h)) {
@@ -198,6 +210,14 @@ export class Window extends UIElement {
                 this.close();
             }, 50);
         }
+    }
+
+    unClick() {
+        // --------------------- Unclicks each child ---------------------
+        this.children.forEach(el => { el.unClick() })
+
+        // --------------------- Unhovers the window ---------------------
+        this.clicked = false;
     }
 
     getClose() {
@@ -219,6 +239,7 @@ export class Taskbar extends UIElement {
     }
 
     addElement(element) {
+        if (!element) return
         this.items.push(element)
     }
 
@@ -391,6 +412,10 @@ export class Label extends UIElement {
 
         this.wrapText(ctx, this.text, x + padding, y + padding, maxWidth, lineHeight);
     }
+
+    click() {}
+
+    unClick() {}
 }
 
 export class Desktop {
@@ -399,42 +424,115 @@ export class Desktop {
     }
 
     addElement(el) {
+        if (!el) return
         this.children.push(el)
     }
 
     drawAt(ctx) {
-        ctx.fillRect(0, UIpref.taskbar.h + 1, window.innerWidth, window.innerHeight)
+        ctx.fillRect(0, UIpref.titlebar.h + 1, window.innerWidth, window.innerHeight)
 
-        let totalPrevHeight = 0;
+        let currentX = 20;
+        let currentY = UIpref.taskbar.h + 10
 
-        let cols = Math.floor(canvas.height / 60)
-        let row = 0, col = 0;
-
-        let leftPadding = 0;
-        let topPadding = 10;
+        const padding = 20;
+        const maxH = canvas.height;
 
         for (let i = 0; i < this.children.length; i++) {
             const el = this.children[i]
 
-            col = i % cols
-            row = Math.floor(i / cols)
-
-            if (col === 0) {
-                const sameRow = this.children.slice(i - cols, i);
-                const maxH = sameRow.length > 0 
-                    ? Math.max(...sameRow.map(e => (e.h || 0) + 20)) 
-                    : 0;
-                totalPrevHeight += maxH + leftPadding
+            if (currentY + (el.h || 0) > maxH) {
+                currentY = UIpref.taskbar.h + 10
+                currentX += 100;
             }
 
-            const xPos = 20 + totalPrevHeight
-            const yPos = UIpref.taskbar.h + topPadding + col * 80
+            el.drawAt(ctx, currentX, currentY, null)
+            el.type = "desktop"
 
-            el.drawAt(ctx, xPos,yPos,null)
-            el.type = "desktop";
+            currentY += (el.h || 0) + padding
         }
 
         //this.children.forEach((children) => children.drawAt(ctx, 40, 40, null))
+    }
+}
+
+export class Textbox extends UIElement {
+    constructor(x, y, w, h) {
+        super(x, y, w, h)
+        this.text = ""
+        this.active = false;
+
+        this.ctx = null;
+    }
+
+    updateHover(xPos, yPos) {
+        if (
+            mouse.x > this.xPos &&
+            mouse.x < this.xPos + this.w &&
+            mouse.y > this.yPos &&
+            mouse.y < this.yPos + this.h
+        )
+        {
+            this.hover = true;
+        } else {
+            this.hover = false
+        }
+    }
+
+    drawAt(ctx, xPos, yPos, parent) {
+        this.ctx = ctx;
+        this.xPos = xPos;
+        this.yPos = yPos;
+
+        this.updateHover(xPos, yPos)
+
+        // Draws the rounded frame
+        ctx.strokeRoundedRect(xPos, yPos, this.w, this.h, 5, "#000")
+
+        let shitty_ass_var = 0;
+        if (this.active) {
+            if (shitty_ass_var == 1) {
+                ctx.fillStyle = "#000"
+                ctx.fillRect(xPos + 10, yPos + 10, 5, this.h)
+                shitty_ass_var = 0;
+            } else { shitty_ass_var = 1}
+        }
+        
+        //checks if clicked, duh
+        if (this.clicked) {
+            this.ctx.fillStyle = "#000"
+            this.ctx.fillRect(0, 0, 100, 100)
+        } else {
+        }
+
+        //same here but with hover
+        if (this.hover && windows.indexOf(parent) == windows.length - 1) {
+            mouse.type = "text"
+        } else {
+            mouse.type = "default"
+        }
+
+        if (this.text == "" || !this.text) this.text = "Empty"
+
+        ctx.fillStyle = "#000"
+        ctx.fillText(this.text, xPos + 5, yPos + this.h / 2)
+    }
+
+    click(mx, my) {
+        if (
+            mouse.x > this.xPos &&
+            mouse.x < this.xPos + this.w &&
+            mouse.y > this.yPos &&
+            mouse.y < this.yPos + this.h
+        ) {
+            this.clicked = true;
+            this.active = true;
+        } else {
+            this.active = false
+        }
+    }
+
+    unClick() {
+        this.clicked = false
     }
 }
 
