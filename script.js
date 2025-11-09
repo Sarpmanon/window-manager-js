@@ -182,11 +182,21 @@ document.addEventListener("keydown", (e) => {
         if (windows.indexOf(wind) !== windows.length - 1) return;
 
         wind.children.forEach((element, ind) => {
-            console.log("1", element)
+            //probably one of the must inefficient ways to do this, but I genuinely don't give a fuck
+            if (e.key == "Backspace") {
+                element.text = element.text.slice(0, -1)
+                return;
+            } else if (e.key == "Space") {
+                element.text = element.text += " "
+                return;
+            } else if (e.key == "Enter") {
+                element.text = element.text = element.text + "\n"
+                return;
+            } else if (e.key == "CapsLock" || e.key == "Delete" || e.key == "Insert" || /^F\d{1,2}$/.test(e.key)) {return}
+
+
             if (!(element instanceof Textbox)) return;
             if (element.active == false) return;
-
-            console.log("2", element)
 
             element.text = element.text + e.key
         });

@@ -511,10 +511,17 @@ export class Textbox extends UIElement {
             mouse.type = "default"
         }
 
-        if (this.text == "" || !this.text) this.text = "Empty"
+        //if (this.text == "" || !this.text) this.text = "Empty";
+
+        const lines = this.text.split("\n")
 
         ctx.fillStyle = "#000"
-        ctx.fillText(this.text, xPos + 5, yPos + this.h / 2)
+        for (let i = 0; i < lines.length; i++) {
+            if (!this.text[i]) return;
+
+            console.log(yPos + (i * 10))
+            ctx.fillText(lines[i], xPos + 5, (yPos + (i * 15)) + 10)
+        }
     }
 
     click(mx, my) {
