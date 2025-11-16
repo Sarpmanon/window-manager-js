@@ -77,8 +77,10 @@ export class Button extends UIElement {
 
             ctx.drawImage(icon, xPos + (this.w - icon.width) / 2, yPos + (this.h - icon.height) / 2);
         } else if (this.spec.type === "text") {
-            ctx.fillStyle = this.hover ? UIpref.taskbar.menu.hoverColor : "#fff";
-            ctx.fillRect(xPos, yPos, this.w, this.h);
+            if (this.hover) {
+                ctx.fillStyle = UIpref.taskbar.menu.hoverColor
+                ctx.fillRect(xPos, yPos, this.w, this.h);
+            }
 
             ctx.fillStyle = "#000";
             ctx.font = "14px Chicago";
@@ -113,8 +115,14 @@ export class Window extends UIElement {
         this.clicked = false;
     }
 
-    addElement(element) {
+    addElement(element, posOverride) {
         if (!element) return;
+        element.posOverride = !!posOverride
+        if (posOverride) {
+            element.relX = element.x - this.x;
+            element.relY = element.y - this.y;
+        }
+
         this.children.push(element)
     }
 
@@ -155,6 +163,7 @@ export class Window extends UIElement {
         ctx.textAlign = "left"
         ctx.fillText(this.title, (this.x + this.w / 2) - titleWidth / 2, this.y + UIpref.titlebar.h / 2);
 
+        //tile spacing thingy
         const spacing = 10;
         const leftPadding = 10;
         const topPadding = UIpref.titlebar.h;
@@ -168,6 +177,12 @@ export class Window extends UIElement {
 
         for (let i = 0; i < this.children.length; i++) {
             const el = this.children[i];
+            if (el.posOverride) {
+                const xPos = this.x + el.relX;
+                const yPos = this.y + el.relY;
+
+                el.drawAt(ctx, xPos, yPos, this); continue
+            }
 
             col = i % cols;
             row = Math.floor(i / cols);
@@ -380,6 +395,7 @@ export class Label extends UIElement {
     }
 
     wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        if (!text) return;
         const words = text.split(" ");
         let line = "";
 
@@ -470,8 +486,7 @@ export class Textbox extends UIElement {
             mouse.x < this.xPos + this.w &&
             mouse.y > this.yPos &&
             mouse.y < this.yPos + this.h
-        )
-        {
+        ) {
             this.hover = true;
         } else {
             this.hover = false
@@ -487,15 +502,6 @@ export class Textbox extends UIElement {
 
         // Draws the rounded frame
         ctx.strokeRoundedRect(xPos, yPos, this.w, this.h, 5, "#000")
-
-        let shitty_ass_var = 0;
-        if (this.active) {
-            if (shitty_ass_var == 1) {
-                ctx.fillStyle = "#000"
-                ctx.fillRect(xPos + 10, yPos + 10, 5, this.h)
-                shitty_ass_var = 0;
-            } else { shitty_ass_var = 1}
-        }
         
         //checks if clicked, duh
         if (this.clicked) {
@@ -511,16 +517,19 @@ export class Textbox extends UIElement {
             mouse.type = "default"
         }
 
-        //if (this.text == "" || !this.text) this.text = "Empty";
-
         const lines = this.text.split("\n")
 
         ctx.fillStyle = "#000"
         for (let i = 0; i < lines.length; i++) {
             if (!this.text[i]) return;
 
-            console.log(yPos + (i * 10))
+            ctx.save()
+            ctx.beginPath()
+            ctx.rect(xPos, yPos, this.w, this.h)
+            ctx.clip()
+            
             ctx.fillText(lines[i], xPos + 5, (yPos + (i * 15)) + 10)
+            ctx.restore()
         }
     }
 

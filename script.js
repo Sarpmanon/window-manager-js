@@ -45,8 +45,8 @@ function drawWindows() {
         window.draw(ctx)
 
         for (let element of window.children) {
-            element.x = window.x;
-            element.y = window.y;
+            //element.x = window.x;
+            //element.y = window.y;
         }
 
     }
@@ -90,11 +90,31 @@ function drawDesktop() {
 
 // --------------------- Desktop ---------------------
 
-const win_test2 = new Window(40, 70, 300, 200, "doktooor")
-const win_test = new Window(40, 70, 300, 200, "doktooor")
-const textBox = new Textbox(0, 0, 100, 50)
+const win_test2 = new Window(40, 70, 300, 200, "TestWindow")
 
-win_test.addElement(textBox)
+//Terminal Window
+function createTerminalWindow() {
+    const LogArray = [];
+
+    const terminalWin = new Window(40, 70, 300, 200, "Terminal")
+    const term_textBox = new Textbox(0 + terminalWin.x + 5, 0 + terminalWin.y + terminalWin.h, terminalWin.w - 10 - 50, 25)
+    const term_confirmButton = new Button(0 + terminalWin.x + 5 + (terminalWin.w - 10 - 45), 0 + terminalWin.y + terminalWin.h, 50, 25, { type: "text", src:"", alt: "Enter"}, () => {
+        LogArray.push(term_textBox.text)
+        
+        LogArray.forEach((log, index) => {
+            const term_newLabel = new Label(terminalWin.x, terminalWin.y + UIpref.titlebar.h + (index * 15), 0, 0, ">" + LogArray[index])
+            terminalWin.addElement(term_newLabel, true)
+        })
+        
+        term_textBox.text = "";
+    })
+
+    terminalWin.addElement(term_textBox, true)
+    terminalWin.addElement(term_confirmButton, true)
+
+    return terminalWin
+}
+//Terminal Window
 
 const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "This PC" }, null)
 const Text_Button_Sample = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
@@ -174,8 +194,8 @@ canvas.addEventListener("mouseup", (e) => {
 const keypresses = {};
 document.addEventListener("keydown", (e) => {
     keypresses[e.key] = true;
-
     checkKeys();
+
     for(let i = windows.length - 1; i >= 0; i--) {
         const wind = windows[i]
 
@@ -192,7 +212,7 @@ document.addEventListener("keydown", (e) => {
             } else if (e.key == "Enter") {
                 element.text = element.text = element.text + "\n"
                 return;
-            } else if (e.key == "CapsLock" || e.key == "Delete" || e.key == "Insert" || /^F\d{1,2}$/.test(e.key)) {return}
+            } else if (e.key == "CapsLock" || e.key == "Delete" || e.key == "Shift" || e.key == "Insert" || /^F\d{1,2}$/.test(e.key)) {return}
 
 
             if (!(element instanceof Textbox)) return;
@@ -209,6 +229,15 @@ document.addEventListener("keyup", (e) => {
 function checkKeys() {
     if (keypresses["Alt"] && keypresses["q"]) {
         windows.splice(windows.length - 1, 1)
+    }
+    if (keypresses[`"`]) {
+        const existing = windows.find(w => w.title === "Terminal")
+
+        if (existing) {
+            windows.splice(windows.indexOf(existing), 1)
+        } else {
+            createTerminalWindow()
+        }
     }
 }
 
