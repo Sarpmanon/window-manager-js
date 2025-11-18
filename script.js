@@ -1,6 +1,7 @@
 import { Window, Button, Taskbar, UIpref, windows, Label, Desktop, Textbox } from './scripts/classes.js'
 import { inRect } from './scripts/utils.js' 
 import { all_cursors } from './assets/cursors/cursors.js'
+import { runCommand } from './scripts/terminal/commands.js'
 
 export const canvas = document.createElement("canvas")
 canvas.id = "canvas"
@@ -93,19 +94,22 @@ function drawDesktop() {
 const win_test2 = new Window(40, 70, 300, 200, "TestWindow")
 
 //Terminal Window
+const LogArray = [];
 function createTerminalWindow() {
-    const LogArray = [];
-
-    const terminalWin = new Window(40, 70, 300, 200, "Terminal")
+    const terminalWin = new Window(Math.floor(Math.random() * 100), UIpref.taskbar.h + Math.floor(Math.random() * 110), 300, 200, "Terminal")
     const term_textBox = new Textbox(0 + terminalWin.x + 5, 0 + terminalWin.y + terminalWin.h, terminalWin.w - 10 - 50, 25)
+
+    refreshTerminal(terminalWin, term_textBox);
+    
     const term_confirmButton = new Button(0 + terminalWin.x + 5 + (terminalWin.w - 10 - 45), 0 + terminalWin.y + terminalWin.h, 50, 25, { type: "text", src:"", alt: "Enter"}, () => {
-        LogArray.push(term_textBox.text)
+        if (!term_textBox.text) return;
         
-        LogArray.forEach((log, index) => {
-            const term_newLabel = new Label(terminalWin.x, terminalWin.y + UIpref.titlebar.h + (index * 15), 0, 0, ">" + LogArray[index])
-            terminalWin.addElement(term_newLabel, true)
-        })
+        const term_returnedFunc = runCommand(term_textBox.text)
+        LogArray.push(`user§${term_textBox.text}`)
         
+        LogArray.push(`system§${term_returnedFunc}`)
+        refreshTerminal(terminalWin, term_textBox);
+
         term_textBox.text = "";
     })
 
@@ -113,6 +117,31 @@ function createTerminalWindow() {
     terminalWin.addElement(term_confirmButton, true)
 
     return terminalWin
+}
+
+function refreshTerminal(terminalWin, term_textBox) {
+    if (!terminalWin || !term_textBox) throw new Error("Missing parameters in function 'refreshTerminal'")
+
+    //I don't think that running two loops that are almost identical are efficient, but here we are
+    for (let i = terminalWin.children.length - 1; i >= 0; i--) {
+        const child = terminalWin.children[i]
+        if (child instanceof Label) {
+            terminalWin.children.splice(i, 1)
+        }
+    }
+
+    LogArray.forEach((log, index) => {
+        let finalOutput;
+        const [determinator_key, remaining_Command] = LogArray[index].split("§")
+        if (determinator_key == "user") {
+            finalOutput = `User> ${remaining_Command}`
+        } else if (determinator_key == "system") {
+            finalOutput = remaining_Command;
+        }
+
+        const term_newLabel = new Label(terminalWin.x, terminalWin.y + UIpref.titlebar.h + (index * 15), 0, 0, finalOutput)
+        terminalWin.addElement(term_newLabel, true)
+    })
 }
 //Terminal Window
 
@@ -203,6 +232,9 @@ document.addEventListener("keydown", (e) => {
 
         wind.children.forEach((element, ind) => {
             //probably one of the must inefficient ways to do this, but I genuinely don't give a fuck
+            if (!(element instanceof Textbox)) return;
+            if (element.active == false) return;
+
             if (e.key == "Backspace") {
                 element.text = element.text.slice(0, -1)
                 return;
@@ -213,10 +245,6 @@ document.addEventListener("keydown", (e) => {
                 element.text = element.text = element.text + "\n"
                 return;
             } else if (e.key == "CapsLock" || e.key == "Delete" || e.key == "Shift" || e.key == "Insert" || /^F\d{1,2}$/.test(e.key)) {return}
-
-
-            if (!(element instanceof Textbox)) return;
-            if (element.active == false) return;
 
             element.text = element.text + e.key
         });
