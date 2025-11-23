@@ -405,6 +405,7 @@ export class Label extends UIElement {
 
             if (testWidth > maxWidth && i > 0) {
                 ctx.textAlign = "left"
+                ctx.font = "14px Chicago";
                 ctx.fillText(line, x, y);
                 line = words[i] + " ";
                 y += lineHeight;
@@ -414,6 +415,7 @@ export class Label extends UIElement {
         }
 
         ctx.textAlign = "left"
+        ctx.font = "14px Chicago";
         ctx.fillText(line, x, y);
     }
 
@@ -445,6 +447,7 @@ export class Desktop {
     }
 
     drawAt(ctx) {
+        ctx.fillStyle = "#e6e6e6"
         ctx.fillRect(0, UIpref.titlebar.h + 1, window.innerWidth, window.innerHeight)
 
         let currentX = 20;
@@ -528,6 +531,7 @@ export class Textbox extends UIElement {
             ctx.rect(xPos, yPos, this.w, this.h)
             ctx.clip()
             
+            ctx.font = "14px Chicago";
             ctx.fillText(lines[i], xPos + 5, (yPos + (i * 15)) + 10)
             ctx.restore()
         }
@@ -549,6 +553,59 @@ export class Textbox extends UIElement {
 
     unClick() {
         this.clicked = false
+    }
+}
+
+export class Checkbox extends UIElement {
+    constructor(x, y, text, checked) {
+        super(x, y, 15, 15)
+
+        this.text = text;
+        this.checked = false;
+    }
+
+    drawAt(ctx, xPos, yPos, parent) {
+        //self explanatory
+        if (this.checked) {
+            ctx.fillRect(xPos, yPos, 15, 15)
+        } else {
+            ctx.lineWidth = 2
+            ctx.strokeRect(xPos, yPos, 15, 15)
+        }
+
+        ctx.beginPath();
+        ctx.textBaseline = "middle"
+        ctx.font = "14px Chicago";
+        ctx.fillText(this.text, xPos + this.w + 5, yPos + (this.h / 2))
+        ctx.closePath();
+    }
+
+    click() {
+        if (
+            mouse.x > this.x &&
+            mouse.x < this.x + this.w &&
+            mouse.y > this.y &&
+            mouse.y < this.y + this.h
+        ) {
+            if (this.checked) { this.checked = false } else {this.checked = true}
+        }
+    }
+}
+
+export class Alert extends UIElement {
+    constructor(x, y, title, description, type) {
+        super(x, y, 0, 0)
+
+        this.title = title || "{title}"
+        this.description = description || "{description}"
+        this.type = type || "question"
+
+        const types = [
+            "critical",
+            "information",
+            "exclamation",
+            "question"
+        ]
     }
 }
 

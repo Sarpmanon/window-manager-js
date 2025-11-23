@@ -1,7 +1,8 @@
-import { Window, Button, Taskbar, UIpref, windows, Label, Desktop, Textbox } from './scripts/classes.js'
+import { Window, Button, Taskbar, UIpref, windows, Label, Desktop, Textbox, Checkbox } from './scripts/classes.js'
 import { inRect } from './scripts/utils.js' 
 import { all_cursors } from './assets/cursors/cursors.js'
 import { runCommand } from './scripts/terminal/commands.js'
+import { all_error_symbols } from './assets/error_symbols/symbols.js'
 
 export const canvas = document.createElement("canvas")
 canvas.id = "canvas"
@@ -94,7 +95,7 @@ function drawDesktop() {
 const win_test2 = new Window(40, 70, 300, 200, "TestWindow")
 
 //Terminal Window
-const LogArray = [];
+export const LogArray = [];
 function createTerminalWindow() {
     const terminalWin = new Window(Math.floor(Math.random() * 100), UIpref.taskbar.h + Math.floor(Math.random() * 110), 300, 200, "Terminal")
     const term_textBox = new Textbox(0 + terminalWin.x + 5, 0 + terminalWin.y + terminalWin.h, terminalWin.w - 10 - 50, 25)
@@ -103,6 +104,10 @@ function createTerminalWindow() {
     
     const term_confirmButton = new Button(0 + terminalWin.x + 5 + (terminalWin.w - 10 - 45), 0 + terminalWin.y + terminalWin.h, 50, 25, { type: "text", src:"", alt: "Enter"}, () => {
         if (!term_textBox.text) return;
+        if (term_textBox.text.startsWith("clear ")) { 
+            runCommand(`clear ${term_textBox.text.split(" ")[1]}`)
+            return;
+        }
         
         const term_returnedFunc = runCommand(term_textBox.text)
         LogArray.push(`user§${term_textBox.text}`)
@@ -134,23 +139,45 @@ function refreshTerminal(terminalWin, term_textBox) {
         let finalOutput;
         const [determinator_key, remaining_Command] = LogArray[index].split("§")
         if (determinator_key == "user") {
-            finalOutput = `User> ${remaining_Command}`
+            finalOutput = `/> ${remaining_Command}`
         } else if (determinator_key == "system") {
             finalOutput = remaining_Command;
         }
 
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(terminalWin.x, terminalWin.y, terminalWin.w, terminalWin.h, "#d381236");
+        ctx.clip()
         const term_newLabel = new Label(terminalWin.x, terminalWin.y + UIpref.titlebar.h + (index * 15), 0, 0, finalOutput)
+        ctx.restore();
+
         terminalWin.addElement(term_newLabel, true)
     })
+}
+
+function drawTerminalBorder() {
+    const exists = windows.find(w => w.title == "Terminal")
+    if (!exists) return;
+
+    ctx.beginPath();
+    ctx.setLineDash([5, 5])
+    ctx.lineWidth = "2"
+    ctx.strokeRect(exists?.x + 1, exists?.y + UIpref.titlebar.h + 1, exists?.w - 1, exists?.h - 1 - 35)
+    ctx.setLineDash([])
+    ctx.closePath();
+
+    //ctx.fillRect(exists?.x, exists?.y, 100, 100)
 }
 //Terminal Window
 
 const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "This PC" }, null)
 const Text_Button_Sample = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
 const Sample_Label = new Label(0, 0, 0, 0, "labeltest")
+const Text_Checkbox = new Checkbox(120, 130, "Test", false)
 win_test2.addElement(Button_Sample)
 win_test2.addElement(Text_Button_Sample)
 win_test2.addElement(Sample_Label)
+win_test2.addElement(Text_Checkbox, true)
 
 
 canvas.addEventListener("mousemove", (e) => {
@@ -269,14 +296,88 @@ function checkKeys() {
     }
 }
 
-function tick() {
-    ctx.fillStyle = "#e0e0e0"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+function wrapTextLines(text, maxWidth) {
+    if (!text) return [];
+    const words = text.split(" ");
+    let line = "";
+    const lines = [];
 
+    for (let i = 0; i < words.length; i++) {
+        const testLine = line + words[i] + " ";
+        const testWidth = ctx.measureText(testLine).width;
+
+        if (testWidth > maxWidth && i > 0) {
+            lines.push(line.trim());
+            line = words[i] + " ";
+        } else {
+            line = testLine;
+        }
+    }
+
+    lines.push(line.trim());
+    return lines;
+}
+
+const errorMessage = {
+    active: true,
+    title: "Significant Error",
+    description: "Your computer has run into a problem and has to restart.",
+    type: ""
+}
+function drawError() {
+    if (!errorMessage["active"]) return;
+
+    const padding = 30;
+    const yPos = UIpref.taskbar.h + padding
+
+    //frame surrounding it
+    ctx.strokeStyle = "#000"
+    ctx.lineWidth = 3;
+    ctx.strokeRect(padding, yPos , canvas.width - (padding * 2), canvas.height / 4)
+
+    //background
+    ctx.fillStyle = "#fff"
+    ctx.fillRect(padding, yPos, canvas.width - (padding * 2), canvas.height / 4)
+
+    //second frame that wraps inside
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(padding + 5, yPos + 5, canvas.width - (padding * 2) - 10, canvas.height / 4 - 10)
+
+    //icon
+    ctx.drawImage(all_error_symbols.critical, padding + 15, yPos + 10)
+
+    //title
+    ctx.font = "18px Chicago";
+    ctx.fillStyle = "#000"
+    ctx.textAlign = "left"
+    ctx.textBaseline = "top"
+    ctx.fillText(errorMessage.title, padding + 15 + 62, yPos + 15)
+
+    //description
+    ctx.font = "14px Chicago";
+    ctx.fillStyle = "#000"
+    ctx.textAlign = "left"
+    ctx.textBaseline = "top"
+
+    const lines = wrapTextLines(errorMessage.description, (canvas.width - (padding * 2)) - 5 - (padding + 15 + 62))
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+
+        ctx.fillText(line, padding + 15 + 62, yPos + 35 + (15 * i))
+    }
+}
+
+function tick() {
     drawDesktop();
     drawWindows();
     drawTaskbar();
+    drawError();
+
     drawMouse();
+
+    drawTerminalBorder();
+    
     requestAnimationFrame(tick)
 }
 

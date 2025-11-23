@@ -1,8 +1,23 @@
+import { LogArray } from "../../script.js"
+
 const commands = {
     about: {
         name: "about",
         func: () => {
             return `System 1`
+        }
+    },
+    clear: {
+        name: "clear",
+        func: () => {
+            //if (!array || array == "") return "No array was found."
+
+            try {
+                LogArray.splice(0, LogArray.length)
+                return "Success!"
+            } catch (error) {
+                return `There was an error: ${error}`
+            }
         }
     }
 }
