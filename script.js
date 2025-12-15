@@ -1,8 +1,9 @@
-import { Window, Button, Taskbar, UIpref, windows, Label, Desktop, Textbox, Checkbox } from './scripts/classes.js'
+import { Window, Button, Taskbar, UIpref, windows, elements, Label, Desktop, Textbox, Checkbox } from './scripts/classes.js'
 import { inRect } from './scripts/utils.js' 
 import { all_cursors } from './assets/cursors/cursors.js'
 import { runCommand } from './scripts/terminal/commands.js'
 import { all_error_symbols } from './assets/error_symbols/symbols.js'
+import { general_icons } from './assets/icons/icons.js'
 
 export const canvas = document.createElement("canvas")
 canvas.id = "canvas"
@@ -78,9 +79,8 @@ function drawTaskbar() {
 // --------------------- Taskbar and submenus ---------------------
 
 // --------------------- Desktop ---------------------
-
 export const Desktop_Main = new Desktop()
-const Disk_Btn = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/5in_fdd.png", alt: "System"}, () => {
+const Disk_Btn = new Button(0, 0, 60, 50, { type: "img", src: "system", alt: "System"}, () => {
     const System_Window = new Window(40, 70, 300, 200, "System")
 })
 Desktop_Main.addElement(Disk_Btn)
@@ -97,12 +97,14 @@ const win_test2 = new Window(40, 70, 300, 200, "TestWindow")
 //Terminal Window
 export const LogArray = [];
 function createTerminalWindow() {
-    const terminalWin = new Window(Math.floor(Math.random() * 100), UIpref.taskbar.h + Math.floor(Math.random() * 110), 300, 200, "Terminal")
-    const term_textBox = new Textbox(0 + terminalWin.x + 5, 0 + terminalWin.y + terminalWin.h, terminalWin.w - 10 - 50, 25)
+    const terminal_terminalWin = new Window(Math.floor(Math.random() * 100), UIpref.taskbar.h + Math.floor(Math.random() * 110), 400, 200, "Terminal")
+    terminal_terminalWin.visible = true;
+    terminal_terminalWin.debug = false;
+    const term_textBox = new Textbox(0 + terminal_terminalWin.x + 5, 0 + terminal_terminalWin.y + terminal_terminalWin.h, terminal_terminalWin.w - 10 - 50, 25)
 
-    refreshTerminal(terminalWin, term_textBox);
+    refreshTerminal(terminal_terminalWin, term_textBox);
     
-    const term_confirmButton = new Button(0 + terminalWin.x + 5 + (terminalWin.w - 10 - 45), 0 + terminalWin.y + terminalWin.h, 50, 25, { type: "text", src:"", alt: "Enter"}, () => {
+    const term_confirmButton = new Button(0 + terminal_terminalWin.x + 5 + (terminal_terminalWin.w - 10 - 45), 0 + terminal_terminalWin.y + terminal_terminalWin.h, 50, 25, { type: "text", src:"", alt: "Enter"}, () => {
         if (!term_textBox.text) return;
         if (term_textBox.text.startsWith("clear ")) { 
             runCommand(`clear ${term_textBox.text.split(" ")[1]}`)
@@ -113,47 +115,57 @@ function createTerminalWindow() {
         LogArray.push(`user§${term_textBox.text}`)
         
         LogArray.push(`system§${term_returnedFunc}`)
-        refreshTerminal(terminalWin, term_textBox);
+        refreshTerminal(terminal_terminalWin, term_textBox);
 
         term_textBox.text = "";
     })
 
-    terminalWin.addElement(term_textBox, true)
-    terminalWin.addElement(term_confirmButton, true)
-
-    return terminalWin
+    terminal_terminalWin.addElement(term_textBox, true)
+    terminal_terminalWin.addElement(term_confirmButton, true)
 }
 
 function refreshTerminal(terminalWin, term_textBox) {
     if (!terminalWin || !term_textBox) throw new Error("Missing parameters in function 'refreshTerminal'")
-
-    //I don't think that running two loops that are almost identical are efficient, but here we are
+    
     for (let i = terminalWin.children.length - 1; i >= 0; i--) {
         const child = terminalWin.children[i]
-        if (child instanceof Label) {
-            terminalWin.children.splice(i, 1)
-        }
+        if (child instanceof Label) terminalWin.children.splice(i, 1)
     }
 
-    LogArray.forEach((log, index) => {
-        let finalOutput;
-        const [determinator_key, remaining_Command] = LogArray[index].split("§")
-        if (determinator_key == "user") {
-            finalOutput = `/> ${remaining_Command}`
-        } else if (determinator_key == "system") {
-            finalOutput = remaining_Command;
-        }
+    const padding = 10;
 
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(terminalWin.x, terminalWin.y, terminalWin.w, terminalWin.h, "#d381236");
-        ctx.clip()
-        const term_newLabel = new Label(terminalWin.x, terminalWin.y + UIpref.titlebar.h + (index * 15), 0, 0, finalOutput)
-        ctx.restore();
+    ctx.font = "14px Chicago";
 
-        terminalWin.addElement(term_newLabel, true)
-    })
+    const maxTextWidth = terminalWin.w - (padding * 2);
+
+    const fontSizeMatch = ctx.font.match(/(\d+)px/);
+    const baseFontSize = fontSizeMatch ? parseInt(fontSizeMatch[1], 10) : 14;
+    const lineHeight = Math.round(baseFontSize * 1.2);
+
+    let lineIndex = 0;
+
+    LogArray.forEach((log) => {
+        const [key, msg] = log.split("§")
+        const content = key === "user" ? `/> ${msg}` : msg;
+
+        const lines = wrapTextLines(content, maxTextWidth);
+
+        lines.forEach((line) => {
+            const labelY = terminalWin.y + UIpref.titlebar.h + (lineIndex * lineHeight);
+
+            const newLabel = new Label(
+                terminalWin.x + padding,
+                labelY,
+                0, 0,
+                line
+            );
+
+            terminalWin.addElement(newLabel, true);
+            lineIndex++
+        });
+    });
 }
+
 
 function drawTerminalBorder() {
     const exists = windows.find(w => w.title == "Terminal")
@@ -168,9 +180,13 @@ function drawTerminalBorder() {
 
     //ctx.fillRect(exists?.x, exists?.y, 100, 100)
 }
+
+export function activateDebugMode() {
+
+}
 //Terminal Window
 
-const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "./assets/icons/system_alive.png", alt: "This PC" }, null)
+const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "5in_fdd", alt: "This PC" }, null)
 const Text_Button_Sample = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
 const Sample_Label = new Label(0, 0, 0, 0, "labeltest")
 const Text_Checkbox = new Checkbox(120, 130, "Test", false)
@@ -213,7 +229,7 @@ canvas.addEventListener("mousedown", (e) => {
             mouse.offsetX = mouse.x - wind.x
             mouse.offsetY = mouse.y - wind.y
 
-            wind.click(mouse.x, mouse.y, ctx)
+            //wind.click(mouse.x, mouse.y, ctx)
         }
 
         windows.splice(i, 1)
@@ -225,12 +241,17 @@ canvas.addEventListener("mousedown", (e) => {
         break;
     }
 
+    for (let i = 0; i < elements.length; i++) {
+        const el = elements[i]
+        el.click(mouse.x, mouse.y)
+    }
+
     if (ifWindowClicked) return;
 
     // Desktop
     for (let i = 0; i < Desktop_Main.children.length; i++) {
         const child = Desktop_Main.children[i]
-        child.click()
+        //child.click() //probably unnecessary since it click all the elements above beforehand
     }
 })
 
@@ -242,8 +263,9 @@ canvas.addEventListener("mouseup", (e) => {
 
     for (let i = windows.length -1; i >= 0; i--) {
         const wind = windows[i]
+        if (!wind) return;
 
-        wind.unClick()
+        wind.unClick();
     }
 })
 
@@ -271,7 +293,7 @@ document.addEventListener("keydown", (e) => {
             } else if (e.key == "Enter") {
                 element.text = element.text = element.text + "\n"
                 return;
-            } else if (e.key == "CapsLock" || e.key == "Delete" || e.key == "Shift" || e.key == "Insert" || /^F\d{1,2}$/.test(e.key)) {return}
+            } else if (e.key == "CapsLock" || e.key == "Delete" || e.key == "Shift" || e.key == "Insert" || e.key == "Control" || e.key == "Alt" || /^F\d{1,2}$/.test(e.key)) {return}
 
             element.text = element.text + e.key
         });
@@ -318,30 +340,36 @@ function wrapTextLines(text, maxWidth) {
     return lines;
 }
 
-const errorMessage = {
-    active: true,
+export const errorMessage = {
+    active: false,
     title: "Significant Error",
     description: "Your computer has run into a problem and has to restart.",
-    type: ""
+    type: "",
+    id: 0,
 }
+const error_confirmButton = new Button(0, 0, 45, 30, { type: "text", src:"", alt: "Enter"}, () => {
+    errorMessage.active = false;
+})
 function drawError() {
     if (!errorMessage["active"]) return;
 
     const padding = 30;
     const yPos = UIpref.taskbar.h + padding
+    const width = canvas.width - (padding * 2)
+    const height = canvas.height / 4
 
     //frame surrounding it
     ctx.strokeStyle = "#000"
     ctx.lineWidth = 3;
-    ctx.strokeRect(padding, yPos , canvas.width - (padding * 2), canvas.height / 4)
+    ctx.strokeRect(padding, yPos , canvas.width - (padding * 2), height)
 
     //background
     ctx.fillStyle = "#fff"
-    ctx.fillRect(padding, yPos, canvas.width - (padding * 2), canvas.height / 4)
+    ctx.fillRect(padding, yPos, canvas.width - (padding * 2), height)
 
     //second frame that wraps inside
     ctx.lineWidth = 2.5;
-    ctx.strokeRect(padding + 5, yPos + 5, canvas.width - (padding * 2) - 10, canvas.height / 4 - 10)
+    ctx.strokeRect(padding + 5, yPos + 5, canvas.width - (padding * 2) - 10, height - 10)
 
     //icon
     ctx.drawImage(all_error_symbols.critical, padding + 15, yPos + 10)
@@ -366,18 +394,79 @@ function drawError() {
 
         ctx.fillText(line, padding + 15 + 62, yPos + 35 + (15 * i))
     }
+
+    //ID
+    ctx.font = "14px Chicago"
+    ctx.fillText(`ID=${errorMessage.id}`, padding * 1.5, (yPos + height) - 30)
+
+    error_confirmButton.drawAt(ctx, width - padding, (height + yPos / 2) - 10, null)
+
 }
 
-function tick() {
+function drawDebugInfo() {
+    const found = windows.find(w => w.title == "Terminal")
+    if (!found?.debug) return;
+
+    ctx.fillStyle = "#000"
+    ctx.fillText(`X: ${mouse.x} Y: ${mouse.y}`, 50, 50)
+}
+
+//These 2 work together so it doesn't run a for loop every fucking frame
+let last = 0;
+const target_fps = 10;
+const interval = 1000 / target_fps
+
+var active_el = null;
+let active_el_index = null;
+
+export function fuckAss() { //probably unnecesary, removes selection from all elements
+    active_el = null
+}
+
+function checkSelected(timestamp) {
+    if (timestamp - last >= interval) {
+        last = timestamp;
+
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i]
+            if (!el.selected) {
+                continue;
+            }
+
+            active_el = el;
+            active_el_index = i;
+        }
+    }
+}
+
+function drawSelected() {
+    if (!active_el) return;
+
+    ctx.strokeStyle = "#ff0000"
+    ctx.strokeRect(active_el.x, active_el.y, active_el.w, active_el.h)
+
+    ctx.fillStyle = "#ff0000"
+    ctx.textAlign = "left"
+    ctx.textBaseline = "bottom"
+
+    const el_infotext = `[${active_el_index}] ${active_el.constructor.name} X: ${active_el?.XPos} Y: ${active_el?.yPos} W: ${active_el.w} H: ${active_el.h}`
+    ctx.fillText(el_infotext, 15, canvas.height - 15)
+}
+//These 2 work together so it doesn't run a for loop every fucking frame
+
+function tick(timestamp) {
     drawDesktop();
     drawWindows();
+    drawTerminalBorder();
     drawTaskbar();
     drawError();
 
-    drawMouse();
+    drawDebugInfo();
+    checkSelected(timestamp);
+    drawSelected();
 
-    drawTerminalBorder();
-    
+    for (let i = 0; i < 5; i++) { drawMouse(); }
+
     requestAnimationFrame(tick)
 }
 

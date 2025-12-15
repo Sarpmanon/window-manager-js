@@ -1,6 +1,8 @@
 import { inRect, sleep } from "./utils.js";
 import { canvas, mouse } from "../script.js";
 import { handleCommand } from "./behaviours/taskbar/commandHandler.js"
+import { errorMessage } from "../script.js";
+import { general_icons } from "../assets/icons/icons.js";
 
 const chc = new FontFace('Chicago', 'url(./assets/fonts/chicago.ttf)')
 chc.load().then((loadedfont) => {
@@ -14,10 +16,13 @@ class UIElement {
         this.w = w;
         this.h = h;
         this.visible = true;
+        this.selected = false;
+
+        elements.push(this)
     }
 
-        drawAt(ctx, x, y) {
-        }
+    drawAt(ctx, x, y) {
+    }
 
     update() {}
     click(mx, my) {}
@@ -36,6 +41,12 @@ export class Button extends UIElement {
 
         this.xPos = 0;
         this.yPos = 0;
+        /*if (this.spec.type === "img") {
+            this.icon = new Image();
+            this.icon.src = this.spec.src;
+        }*/
+
+        this.icon = this.spec.src;
     }
 
     updateHover(xPos, yPos) {
@@ -57,14 +68,16 @@ export class Button extends UIElement {
         this.updateHover(xPos, yPos);
 
         if (this.spec.type === "img") {
-            const icon = new Image();
-            icon.src = this.spec.src;
-            
+            const icon = general_icons[this.icon]
+            if(!icon) { console.warn("Unable to get an image for button:", this); return }
             const topWindow = windows.length > 0 ? windows[windows.length - 1] : null
+
 
             const textWidth = ctx.measureText(this.spec.alt).width
 
             if (this.hover && ((this.type=="desktop" && (!topWindow || mouse.x<topWindow.x||mouse.x>topWindow.x+topWindow.w||mouse.y<topWindow.y||mouse.y>topWindow.y+topWindow.h)) || topWindow===windowRef)) {
+                if (errorMessage.active) return;
+
                 ctx.fillStyle = UIpref.button.hoverColor
                 ctx.fillRect(xPos, yPos, this.w, this.h);
             }
@@ -85,6 +98,7 @@ export class Button extends UIElement {
             ctx.fillStyle = "#000";
             ctx.font = "14px Chicago";
             ctx.textAlign = "left"
+            ctx.textBaseline = "middle"
             ctx.fillText(this.spec.alt, xPos, yPos + this.h / 2);
         }
     }
@@ -101,10 +115,10 @@ export class Button extends UIElement {
     }
 
     unClick() {
-
     }
 }
 
+//TODO: Add events (like "close") into the window class
 export class Window extends UIElement {
     constructor(x,y,w,h,title) {
         super(x,y,w,h)
@@ -132,19 +146,21 @@ export class Window extends UIElement {
      */
     draw(ctx) {
         this.ctx = ctx;
+        if (!this.visible) return;
 
         //line surrounding it
         ctx.strokeStyle = "rgb(0, 0, 0)"
         ctx.lineWidth = 4
         ctx.strokeRect(Number(this.x) + 1, this.y + 1, this.w, Number(this.h) + Number(UIpref.titlebar.h))
 
-        //window
-        ctx.fillStyle = UIpref.window.color
-        ctx.fillRect(this.x, Number(this.y) + Number(UIpref.titlebar.h), this.w, this.h)
-
         //titlebar
         ctx.fillStyle = UIpref.titlebar.color;
         ctx.fillRect(this.x, this.y, this.w, Number(UIpref.titlebar.h))
+
+        //window
+        ctx.fillStyle = UIpref.window.color
+        ctx.fillRect(this.x, Number(this.y) + Number(UIpref.titlebar.h), this.w, this.h)
+        ctx.rect(this.x, Number(this.y) + Number(UIpref.titlebar.h), this.w, this.h)
 
         ctx.beginPath()
         ctx.lineWidth = 2;
@@ -181,7 +197,7 @@ export class Window extends UIElement {
                 const xPos = this.x + el.relX;
                 const yPos = this.y + el.relY;
 
-                el.drawAt(ctx, xPos, yPos, this); continue
+                el.drawAt(ctx, xPos, yPos, this); ctx.restore() ;continue
             }
 
             col = i % cols;
@@ -214,7 +230,7 @@ export class Window extends UIElement {
 
     click(mx, my, ctx) {
         // --------------------- Clicks each child ---------------------
-        this.children.forEach(el => { el.click(mx, my) })
+        //this.children.forEach(el => { el.click(mx, my) })
         const g = this.getClose()
 
         // --------------------- Close Button ---------------------
@@ -565,6 +581,9 @@ export class Checkbox extends UIElement {
     }
 
     drawAt(ctx, xPos, yPos, parent) {
+        this.xPos = xPos;
+        this.yPos = yPos;
+
         //self explanatory
         if (this.checked) {
             ctx.fillRect(xPos, yPos, 15, 15)
@@ -582,13 +601,17 @@ export class Checkbox extends UIElement {
 
     click() {
         if (
-            mouse.x > this.x &&
-            mouse.x < this.x + this.w &&
-            mouse.y > this.y &&
-            mouse.y < this.y + this.h
+            mouse.x > this.xPos &&
+            mouse.x < this.xPos + this.w &&
+            mouse.y > this.yPos &&
+            mouse.y < this.yPos + this.h
         ) {
             if (this.checked) { this.checked = false } else {this.checked = true}
         }
+    }
+
+    unClick() {
+
     }
 }
 
@@ -632,3 +655,4 @@ export const UIpref = {
 }
 
 export const windows = [];
+export const elements = [];

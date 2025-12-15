@@ -8,6 +8,9 @@ export function handleCommand(cmd) {
         case "New":
             File_Options.New();
             break;
+        case "Close":
+            File_Options.Close();
+            break;
         default:
             console.log("Unknown command (taskbar)", cmd)
     }
