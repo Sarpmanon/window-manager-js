@@ -1,0 +1,1 @@
+A bare-bones window manager thingy made entirely in canvas API.
