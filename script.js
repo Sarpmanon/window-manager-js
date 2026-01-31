@@ -23,6 +23,7 @@ canvas.style.height = "100vh";
 canvas.style.zIndex = "9999";
 canvas.style.display = "block";
 canvas.style.background = "#fff";
+canvas.style.touchAction = "none";
 
 document.body.style.cursor = "none" //hides the cursor that the user uses
 
@@ -200,6 +201,13 @@ canvas.addEventListener("mousemove", (e) => {
     }
 })
 
+canvas.addEventListener("dblclick", (e) => {
+    //same stuff over and over again...
+    elements.forEach(element => {
+        element.click(mouse.x, mouse.y)
+    })
+})
+
 canvas.addEventListener("mousedown", (e) => {
     // Context Menu Stuff
     if (e.button == 0) {
@@ -244,6 +252,8 @@ canvas.addEventListener("mousedown", (e) => {
 
             // Check the children array of the clicked window
             for (let child of wind.children) {
+                console.log(child)
+                if (child.constructor.name == "Button" && child.spec.type == "img") continue;
                 if (child.click) child.click(mouse.x, mouse.y)
             }
 
@@ -253,10 +263,8 @@ canvas.addEventListener("mousedown", (e) => {
 
     // If none of the windows are clicked, go for the desktop elements,
     if (!clickedInsideWindow) {
-        /*Desktop_Main.children.forEach(child => {
-            if (child.click) child.click(mouse.x, mouse.y)
-        })*/
         elements.forEach(element => {
+            if (element.constructor.name == "Button" && element.spec.type == "img") return;
             element.click(mouse.x, mouse.y)
         })
     }
@@ -374,7 +382,7 @@ function drawError() {
     ctx.textAlign = "left"
     ctx.textBaseline = "top"
 
-    const lines = wrapTextLines(errorMessage.description, (canvas.width - (padding * 2)) - 5 - (padding + 15 + 62))
+    const lines = wrapTextLines(errorMessage.description.toString(), (canvas.width - (padding * 2)) - 5 - (padding + 15 + 62))
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i]
@@ -474,32 +482,41 @@ let lastTime = performance.now();
 let frames = 0;
 let fps = 0;
 
+let lastError = null;
+
 function tick(timestamp) {
-    frames++;
-    if (timestamp - lastTime >= 1000) {
-        fps = frames;
-        frames = 0;
-        lastTime = timestamp;
+    try {
+        frames++;
+        if (timestamp - lastTime >= 1000) {
+            fps = frames;
+            frames = 0;
+            lastTime = timestamp;
+        }
+
+        //resets the mouse to prevent it from bugging out when there are more than 1 children that changes the mouse in a single window
+        mouse.type = "default"
+
+        drawDesktop();
+        drawWindows();
+        drawTaskbar();
+        drawContextMenu();
+
+        drawDebugInfo();
+        checkSelected(timestamp);
+        drawSelected();
+
+        debugModeDraw();
+
+        for (let i = 0; i < 5; i++) { drawMouse(); }
+
+        requestAnimationFrame(tick)
+    } catch (error) {
+        errorMessage.active = true;
+        errorMessage.description = error;
+        lastError = error;
     }
 
-    //resets the mouse to prevent it from bugging out when there are more than 1 children that changes the mouse in a single window
-    mouse.type = "default"
-
-    drawDesktop();
-    drawWindows();
-    drawTaskbar();
-    drawContextMenu();
-    drawError();
-
-    drawDebugInfo();
-    checkSelected(timestamp);
-    drawSelected();
-
-    debugModeDraw();
-
-    for (let i = 0; i < 5; i++) { drawMouse(); }
-
-    requestAnimationFrame(tick)
+    if (lastError) drawError();
 }
 
 tick();

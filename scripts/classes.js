@@ -105,6 +105,8 @@ export class Button extends UIElement {
             ctx.textAlign = "center"
             ctx.textBaseline = "middle"
             ctx.fillText(this.spec.alt, xPos + this.w / 2, yPos + this.h / 2);
+        } else {
+            throw new Error("No type specificed in button.", this.spec.type)
         }
     }
 
