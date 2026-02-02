@@ -1,4 +1,13 @@
 
+/**
+ * Checks if the mouse is inside a defined border
+ * @param {object} mouse 
+ * @param {number} x 
+ * @param {number} w 
+ * @param {number} y 
+ * @param {number} h 
+ * @returns 
+ */
 export function inRect(mouse, x, w, y, h) {
     if (mouse == undefined || x == undefined || w == undefined || y == undefined || h == undefined) {
         throw new Error(`Missing parameter in inRect`)
@@ -23,6 +32,12 @@ CanvasRenderingContext2D.prototype.strokeRoundedRect = function(x = 0, y = 0, w 
     this.stroke(); //change to this.fill() for it to fill all the square
 }
 
+/**
+ * Wraps a text (as the name suggests) so it doesn't go out of bounds
+ * @param {string} text 
+ * @param {number} maxWidth 
+ * @returns {object}
+ */
 export function wrapTextLines(text, maxWidth) {
     if (!text) return [];
     const words = text.split(" ");
@@ -42,5 +57,6 @@ export function wrapTextLines(text, maxWidth) {
     }
 
     lines.push(line.trim());
+    console.log(typeof(lines))
     return lines;
 }

@@ -1,3 +1,12 @@
+/**
+ * Creates sprite images that makes it possible to convert arrays into real usable images inside the project
+ * @param {Array} image 
+ * @param {Object} colormap 
+ * @param {number} pixelsize 
+ * @param {number} x 
+ * @param {number} y 
+ * @returns {*}
+ */
 export function createSpriteImage(image, colormap, pixelsize = 1, x, y) {
     const w = image[0].length * pixelsize;
     const h = image.length * pixelsize;

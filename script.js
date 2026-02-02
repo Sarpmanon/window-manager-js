@@ -38,21 +38,22 @@ export let mouse = {
     type: "default",
 }
 
+/**
+ * Self explanatory. Draws the mouse depending on it's type.
+ */
 function drawMouse() {
     if (mouse.type === "default") { ctx.drawImage(all_cursors.default, mouse.x, mouse.y) }
     if (mouse.type === "text") { ctx.drawImage(all_cursors.text, mouse.x, mouse.y) }
 }
 
+/**
+ * Draws windows.
+ */
 function drawWindows() {
     if (!windows) return;
 
     for (let window of windows) {
         window.draw(ctx)
-
-        for (let element of window.children) {
-            //element.x = window.x;
-            //element.y = window.y;
-        }
 
     }
 }
@@ -75,6 +76,9 @@ for (let i = 0; i < taskbar_items.length; i++) {
     taskbar.addElement(tskbr_btn)
 }
 
+/**
+ * Also self explanatory.
+ */
 function drawTaskbar() {
     taskbar.draw(ctx)
 }
@@ -87,7 +91,9 @@ const Disk_Btn = new Button(0, 0, 60, 50, { type: "img", src: "system", alt: "Sy
 })
 Desktop_Main.addElement(Disk_Btn)
 
-
+/**
+ * This too.
+ */
 function drawDesktop() {
     Desktop_Main.drawAt(ctx)
 }
@@ -131,6 +137,12 @@ function createTerminalWindow() {
     terminal_terminalWin.addElement(term_confirmButton, true)
 }
 
+/**
+ * Refreshes the terminal every time so it doesn't log the same thing over and over again
+ * @param {Window} terminalWin 
+ * @param {Textbox} term_textBox 
+ * @param {Textbox} resulttextbox 
+ */
 function refreshTerminal(terminalWin, term_textBox, resulttextbox) {
     if (!terminalWin || !term_textBox)
         throw new Error("Missing parameters in function 'refreshTerminal'")
@@ -178,7 +190,7 @@ function debugModeDraw() {
 }
 //Terminal Window }
 
-const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "globe folder", alt: "This PC" }, () => {
+const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "fdd", alt: "This PC" }, () => {
     console.log(Button_Sample.spec.alt)
 })
 const Text_Button_Sample = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
@@ -188,6 +200,42 @@ win_test2.addElement(Button_Sample)
 win_test2.addElement(Text_Button_Sample)
 win_test2.addElement(Sample_Label)
 win_test2.addElement(Text_Checkbox, true)
+
+/**
+ * Handles the click function for each window.
+ * @returns {boolean}
+ */
+function windowClick() {
+    for (let i = windows.length - 1; i >= 0; i--) {
+        const wind = windows[i]
+
+        if (inRect(mouse, wind.x, wind.w, wind.y, wind.h + UIpref.titlebar.h)) {
+
+            windows.splice(i, 1)
+            windows.push(wind)
+
+            // Checks if titlebar is the part being clicked
+            if (inRect(mouse, wind.x, wind.w, wind.y, wind.h)) {
+                mouse.dragging = true;
+                mouse.target = wind;
+                mouse.offsetX = mouse.x - wind.x
+                mouse.offsetY = mouse.y - wind.y
+
+                wind.click(mouse.x, mouse.y, ctx)
+            }
+
+            // Check the children array of the clicked window
+            for (let child of wind.children) {
+                if (child.constructor.name == "Button" && child.spec.type == "img") continue;
+                if (child.click) child.click(mouse.x, mouse.y)
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
 
 
 canvas.addEventListener("mousemove", (e) => {
@@ -203,6 +251,7 @@ canvas.addEventListener("mousemove", (e) => {
 
 canvas.addEventListener("dblclick", (e) => {
     //same stuff over and over again...
+    if (windowClick() === true) return;
     elements.forEach(element => {
         element.click(mouse.x, mouse.y)
     })
@@ -230,36 +279,7 @@ canvas.addEventListener("mousedown", (e) => {
     if (taskbar.selectedMenu != -1) return;
 
     // Windows
-    let clickedInsideWindow = false;
-    for (let i = windows.length - 1; i >= 0; i--) {
-        const wind = windows[i]
-
-        if (inRect(mouse, wind.x, wind.w, wind.y, wind.h + UIpref.titlebar.h)) {
-            clickedInsideWindow = true;
-
-            windows.splice(i, 1)
-            windows.push(wind)
-
-            // Checks if titlebar is the part being clicked
-            if (inRect(mouse, wind.x, wind.w, wind.y, wind.h)) {
-                mouse.dragging = true;
-                mouse.target = wind;
-                mouse.offsetX = mouse.x - wind.x
-                mouse.offsetY = mouse.y - wind.y
-
-                wind.click(mouse.x, mouse.y, ctx)
-            }
-
-            // Check the children array of the clicked window
-            for (let child of wind.children) {
-                console.log(child)
-                if (child.constructor.name == "Button" && child.spec.type == "img") continue;
-                if (child.click) child.click(mouse.x, mouse.y)
-            }
-
-            break;
-        }
-    }
+    let clickedInsideWindow = windowClick();
 
     // If none of the windows are clicked, go for the desktop elements,
     if (!clickedInsideWindow) {
@@ -434,6 +454,9 @@ function checkSelected(timestamp) {
     }
 }
 
+/**
+ * Draws a red and hollow rectangle around the selected element.
+ */
 function drawSelected() {
     if (!active_el) return;
 
@@ -471,6 +494,10 @@ function createContextMenu() {
 
     openContextMenu = DesktopContextMenu;
 }
+/**
+ * Removes the buttons from the context menu so it doesn't get activated even after getting invisible
+ * @param {object} dcm 
+ */
 function DesktopContextMenuRemoveChildren(dcm) {
     dcm.children.forEach(child => {
         child.remove();
@@ -484,6 +511,10 @@ let fps = 0;
 
 let lastError = null;
 
+/**
+ * Basically draws everything every frame and also calculates the fps.
+ * @param {*} timestamp 
+ */
 function tick(timestamp) {
     try {
         frames++;

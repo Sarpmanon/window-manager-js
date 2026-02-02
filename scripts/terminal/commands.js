@@ -62,6 +62,11 @@ const commands = {
     }
 }
 
+/**
+ * Checks if the inputted command exists.
+ * @param {string} input 
+ * @returns {string}
+ */
 export function runCommand(input) {
     const [cmd, ...args] = input.split(" ")
     if (commands[cmd]) {

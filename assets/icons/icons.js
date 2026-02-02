@@ -20,6 +20,25 @@ const icons = {
             0: null,
         },
     },
+    fdd: {
+        pixels: [
+            [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+            [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+            [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+            [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+            [2,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,2],
+            [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+            [2,1,1,1,1,1,1,1,1,1,1,1,2,2,1,1,1,1,1,1,2],
+            [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+            [2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2],
+            [0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,0],
+        ],
+        colormap: {
+            2: "#000",
+            1: "#fff",
+            0: null,
+        },
+    },
     system: {
         pixels: [
             [0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0],
@@ -269,6 +288,7 @@ const icons = {
     },
 }
 
+//TODO: Create a function that does this automatically
 export const general_icons = {
     "5in_fdd": createSpriteImage(icons.fiveinchfdd.pixels, icons.fiveinchfdd.colormap, 1, 150, 150),
     "system": createSpriteImage(icons.system.pixels, icons.system.colormap, 1, 150, 150),
@@ -277,5 +297,6 @@ export const general_icons = {
     "screen": createSpriteImage(icons.screen.pixels, icons.screen.colormap, 1, 150, 150),
     "hdd": createSpriteImage(icons.hdd.pixels, icons.hdd.colormap, 1, 150, 150),
     "folder": createSpriteImage(icons.folder.pixels, icons.folder.colormap, 1, 150, 150),
-    "globe folder": createSpriteImage(icons.globe_folder.pixels, icons.globe_folder.colormap, 1, 150, 150)
+    "globe folder": createSpriteImage(icons.globe_folder.pixels, icons.globe_folder.colormap, 1, 150, 150),
+    "fdd": createSpriteImage(icons.fdd.pixels, icons.fdd.colormap, 1, 150, 150),
 }

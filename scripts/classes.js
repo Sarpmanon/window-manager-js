@@ -174,20 +174,21 @@ export class Window extends UIElement {
         this.ctx = ctx;
         if (!this.visible) return;
 
-        //line surrounding it
+        //line surrounding the window
         ctx.strokeStyle = "rgb(0, 0, 0)"
         ctx.lineWidth = 4
-        ctx.strokeRect(Number(this.x) + 1, this.y + 1, this.w, Number(this.h) + Number(UIpref.titlebar.h))
+        ctx.strokeRect(Number(this.x) + 1, this.y + 1, this.w, Number(this.h))
 
         //titlebar
         ctx.fillStyle = UIpref.titlebar.color;
         ctx.fillRect(this.x, this.y, this.w, Number(UIpref.titlebar.h))
 
-        //window
+        //window background
         ctx.fillStyle = UIpref.window.color
-        ctx.fillRect(this.x, Number(this.y) + Number(UIpref.titlebar.h), this.w, this.h)
+        ctx.fillRect(this.x, Number(this.y) + Number(UIpref.titlebar.h), this.w, this.h - UIpref.titlebar.h)
         ctx.rect(this.x, Number(this.y) + Number(UIpref.titlebar.h), this.w, this.h)
 
+        //the line surrounding the titlebar
         ctx.beginPath()
         ctx.lineWidth = 2;
         ctx.moveTo(this.x, this.y + UIpref.titlebar.h)
@@ -241,6 +242,8 @@ export class Window extends UIElement {
             el.drawAt(ctx, xPos, yPos, this);
             el.type = "window"
         }
+
+        ctx.strokeRoundedRect(this.x, this.y, this.w, this.h, 15, "#ff0000")
 
         // Close button
         if (!this.clicked) {
