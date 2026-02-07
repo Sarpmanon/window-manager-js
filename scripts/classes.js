@@ -47,6 +47,8 @@ export class Button extends UIElement {
             this.icon = new Image();
             this.icon.src = this.spec.src;
         }*/
+
+        this.tectWidth = ctx.measureText(this.spec.alt).width;
     }
 
     remove() {
@@ -77,8 +79,7 @@ export class Button extends UIElement {
             if(!icon) { console.warn("Unable to get an image for button:", this); return }
             const topWindow = windows.length > 0 ? windows[windows.length - 1] : null
 
-
-            const textWidth = ctx.measureText(this.spec.alt).width
+            const textWidth = this.textWidth;
 
             if (this.hover && ((this.type=="desktop" && (!topWindow || mouse.x<topWindow.x||mouse.x>topWindow.x+topWindow.w||mouse.y<topWindow.y||mouse.y>topWindow.y+topWindow.h)) || topWindow===windowRef)) {
                 if (errorMessage.active) return;
@@ -132,8 +133,12 @@ export class Window extends UIElement {
         this.title = title;
         this.children = [];
 
+        //un-commented for the dashed line preview window thingy to work
         windows.push(this)
         this.clicked = false;
+        
+        this.jaggedw = 0;
+        this.jaggedH = 0;
 
         this.events = {
             close: []
@@ -243,7 +248,8 @@ export class Window extends UIElement {
             el.type = "window"
         }
 
-        ctx.strokeRoundedRect(this.x, this.y, this.w, this.h, 15, "#ff0000")
+        //for debugging purposes
+        //ctx.strokeRoundedRect(this.x, this.y, this.w, this.h, 15, "#ff0000")
 
         // Close button
         if (!this.clicked) {
@@ -716,6 +722,56 @@ export class ContextMenu extends UIElement {
             el.drawAt(ctx, this.x, this.y + (ind * el.h), null)
         })
     }
+}
+
+export class ColumnChart extends UIElement {
+  constructor(x,y,w,h) {
+    super(10,10,150,75)
+    
+    this.object = null;
+  }
+  
+  insertObject(obj) {
+    this.object = obj;
+  }
+  
+  drawAt(ctx, xPos, yPos, parent) {
+    if (!this.object) return;
+    
+    const width = this.w;
+    const height = this.h
+    
+    const columns = this.object.columns;
+    
+    //Height calculations
+    let biggestColumnHeight = 0;
+    let biggestColumn = null;
+    for (let i = 0; i < columns.length; i++) {
+      let object = columns[i]
+      
+      if (biggestColumnHeight > object.value) {
+        continue;
+      } else {
+        biggestColumnHeight = object.value;
+      }
+    }
+    
+    ctx.fillRect(this.x, this.y + height, 10, height)
+    
+    
+    
+    
+    ctx.strokeRoundedRect(xPos,yPos,width,height)
+  }
+  
+  click() {
+    
+  }
+  
+  unClick() {
+    
+    
+  }
 }
 
 export const UIpref = {

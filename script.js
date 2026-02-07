@@ -1,10 +1,12 @@
-import { Window, Button, Taskbar, UIpref, windows, elements, Label, Desktop, Textbox, Checkbox, ContextMenu } from './scripts/classes.js'
+import { Window, Button, Taskbar, UIpref, windows, elements, Label, Desktop, Textbox, Checkbox, ContextMenu, ColumnChart } from './scripts/classes.js'
 import { inRect, wrapTextLines } from './scripts/utils.js' 
 import { all_cursors } from './assets/cursors/cursors.js'
 import { runCommand } from './scripts/terminal/commands.js'
 import { all_error_symbols } from './assets/error_symbols/symbols.js'
 import { general_icons } from './assets/icons/icons.js'
 import { createIcon } from './scripts/behaviours/desktopBehaviours.js'
+
+
 
 export const canvas = document.createElement("canvas")
 canvas.id = "canvas"
@@ -196,10 +198,33 @@ const Button_Sample = new Button(0, 0, 60, 50, { type: "img", src: "fdd", alt: "
 const Text_Button_Sample = new Button(0, 0, 60, 20, { type: "text", src: null, alt: "doktor" }, null)
 const Sample_Label = new Label(0, 0, 0, 0, "labeltest")
 const Text_Checkbox = new Checkbox(120, 130, "Test", false)
+
+const Sample_Chart_Object = {
+  x: "X Axis",
+  y: "Y Axis",
+  columns: [
+    {
+      name: "1",
+      value: 10,
+    },
+    {
+      name: "2",
+      value: 5,
+    },
+    {
+      name: "3",
+      value: 25,
+    }
+  ]
+}
+const Sample_Chart = new ColumnChart()
+Sample_Chart.insertObject(Sample_Chart_Object)
+
 win_test2.addElement(Button_Sample)
 win_test2.addElement(Text_Button_Sample)
 win_test2.addElement(Sample_Label)
 win_test2.addElement(Text_Checkbox, true)
+win_test2.addElement(Sample_Chart)
 
 /**
  * Handles the click function for each window.
@@ -215,7 +240,7 @@ function windowClick() {
             windows.push(wind)
 
             // Checks if titlebar is the part being clicked
-            if (inRect(mouse, wind.x, wind.w, wind.y, wind.h)) {
+            if (inRect(mouse, wind.x, wind.w, wind.y, UIpref.titlebar.h)) {
                 mouse.dragging = true;
                 mouse.target = wind;
                 mouse.offsetX = mouse.x - wind.x
@@ -237,11 +262,10 @@ function windowClick() {
     return false;
 }
 
-
+const canvas_boundingRect = canvas.getBoundingClientRect();
 canvas.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - rect.left;
-    mouse.y = e.clientY - rect.top;
+    mouse.x = e.clientX - canvas_boundingRect.left;
+    mouse.y = e.clientY - canvas_boundingRect.top;
 
     if (mouse.dragging && mouse.target) {
         mouse.target.x = mouse.x - mouse.offsetX
@@ -265,6 +289,8 @@ canvas.addEventListener("mousedown", (e) => {
         openContextMenu = null;
     } else if (e.button == 2) {
         //Right click, creates a ContextMenu class
+        if (windowClick() == true) return;
+        
         isContextMenuOpen = true;
         createContextMenu();
         return;
@@ -538,7 +564,7 @@ function tick(timestamp) {
 
         debugModeDraw();
 
-        for (let i = 0; i < 5; i++) { drawMouse(); }
+        drawMouse()
 
         requestAnimationFrame(tick)
     } catch (error) {
